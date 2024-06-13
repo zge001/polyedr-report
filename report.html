@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="ru" xml:lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <meta name="author" content="Г.Е. Жмелев" />
+  <title>Отчёт о модификации проекта «Изображение проекции полиэдра»</title>
+  <link rel="stylesheet" href="https://edu-support.mephi.ru/Stylesheets/Highlighting.css">
+  <link rel="stylesheet" href="https://edu-support.mephi.ru/Stylesheets/markdown.css">
+  
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
+</head>
+<body>
+<header>
+<h1 class="title">Отчёт о модификации проекта «Изображение проекции
+полиэдра»</h1>
+<p class="author">Г.Е. Жмелев</p>
+<p class="date">12 июня 2024 года</p>
+</header>
+<nav id="TOC">
+<ul>
+<li><a href="#постановка-задачи" id="toc-постановка-задачи">Постановка
+задачи</a></li>
+<li><a href="#ход-решения" id="toc-ход-решения">Ход решения</a>
+<ul>
+<li><a href="#вычисление-площади" id="toc-вычисление-площади">Вычисление
+площади</a></li>
+<li><a href="#модификация-класса-tkdrawer"
+id="toc-модификация-класса-tkdrawer">Модификация класса
+<code>TkDrawer</code></a></li>
+<li><a href="#написание-тестов" id="toc-написание-тестов">Написание
+тестов</a></li>
+</ul></li>
+<li><a
+href="#команды-с-помощью-которых-получены-итоговые-отчёты-в-заданных-форматах"
+id="toc-команды-с-помощью-которых-получены-итоговые-отчёты-в-заданных-форматах">Команды,
+с помощью которых получены итоговые отчёты в заданных форматах</a></li>
+</ul>
+</nav>
+<h2 id="постановка-задачи">Постановка задачи</h2>
+<p>Назовём точку в пространстве «хорошей», если её проекция находится
+строго правее прямой <span class="math inline">\(x=-2\)</span>.</p>
+<p><em>Модифицируйте эталонный проект таким образом, чтобы определялась
+и печаталась следующая характеристика полиэдра: сумма площадей граней,
+ровно одна вершина которых — «хорошая» точка.</em></p>
+<h2 id="ход-решения">Ход решения</h2>
+<h3 id="вычисление-площади">Вычисление площади</h3>
+<p>В процесе решения задачи потребуется отличать «хорошую» точку от
+обычной. Для этого определим для объектов класса <code>R3</code> атрибут
+<code>is_good</code>. Он принимает значение <code>True</code>, если
+точка «хорошая», а иначе — <code>False</code>. В том же классе определим
+два метода:</p>
+<ul>
+<li><code>set_is_good()</code> — метод, который определяет, является ли
+точка «хорошей» (присваивая соответствующее значение атрибуту
+<code>is_good</code>).</li>
+<li><code>magnitude()</code> — метод, который возвращает модуль вектора
+с началом в центре координат и концом в данной точке.</li>
+</ul>
+<p>Для подсчёта площади грани определим метод <code>area()</code> в
+классе <code>Facet</code>. В начале следует создать функцию, которая
+будет возвращать площадь треугольной грани, заданной двумя векторами.
+Такая площадь определяется по следующей формуле: <span
+class="math display">\[S = \frac{1}{2}|\vec{a} \times \vec{b}|\]</span>
+где <span class="math inline">\(\vec{a}\)</span>, <span
+class="math inline">\(\vec{b}\)</span> — векторы, исходящие из одной
+точки. Получая на вход функции грань из произвольного числа вершин,
+следует разбить её на несколько треугольников и подсчитать площадь
+каждого. Суммарная площадь — искомая.</p>
+<figure>
+<img src="./src/img/figure1.png"
+alt="Площадь данного многоугольника суммируется из площадей составляющих его треугольников (выделены разными цветами). Каждый из треугольников построен на двух векторах, исходящих из одной точки." />
+<figcaption aria-hidden="true">Площадь данного многоугольника
+суммируется из площадей составляющих его треугольников (выделены разными
+цветами). Каждый из треугольников построен на двух векторах, исходящих
+из одной точки.</figcaption>
+</figure>
+<p>Реализация метода <code>area()</code>:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode py"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Площадь грани</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> area(<span class="va">self</span>):</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="co"># площадь треугольника, построенного на двух векторах</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> __triangle_area(edge_1, edge_2):</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> edge_1.cross(edge_2).magnitude() <span class="op">/</span> <span class="dv">2</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    area <span class="op">=</span> <span class="fl">0.0</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="co"># грань может иметь любое число вершин</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, <span class="bu">len</span>(<span class="va">self</span>.vertexes) <span class="op">-</span> <span class="dv">1</span>):</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        edge_1 <span class="op">=</span> <span class="va">self</span>.vertexes[<span class="dv">0</span>] <span class="op">-</span> <span class="va">self</span>.vertexes[i]</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        edge_2 <span class="op">=</span> <span class="va">self</span>.vertexes[i<span class="op">+</span><span class="dv">1</span>] <span class="op">-</span> <span class="va">self</span>.vertexes[i]</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        area <span class="op">+=</span> __triangle_area(edge_1, edge_2)</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> area</span></code></pre></div>
+<p>При чтении данных из файла, содержащего информацию о полиэдре, у
+каждой точки будем вызвать метод <code>is_good()</code>. Делать это
+требуется перед умножением точки на коэффициент гомотетии, т.к. он не
+влияет на её проекцию. Заметим, что при умножении точки на коэффициент
+гомотетии, нам возвращается новый объекта класса <code>R3</code>. По
+этой причине добавим в конструктор данного класса аргумент,
+присваивающий значение атрибуту <code>is_good</code>. Таким образом,
+даже после домоножения точки на коэффициент гомотетии мы будем знать,
+является ли она «хорошей».</p>
+<p>Для решения задачи требуется найти суммы площадей граней, а не их
+проекций. Добавим дополнительный список <code>_vertexes</code>, который
+будет содержать вершины полиэдра без преобразований. Данный список будет
+заполняться вместе со списком преобразованных вершин полиэдра, поэтому
+порядок точек в нём будет такой же.</p>
+<p>При обработке грани, будем записывать количество «хороших» точек в
+переменную <code>good_points_num</code>. Если значение данной переменной
+равно <span class="math inline">\(1\)</span>, посчитаем площадь грани
+построенной на заданных вершинах (используя при этом вершины без
+преобразований из списка <code>_vertexes</code>). Найденную площадь
+прибавим к новому атрибуту <code>good_area</code> класса
+<code>Polyedr</code>, который обозначает искомую площадь.</p>
+<p>Модификация части кода, отвечающей за обработку граней:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode py"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># вспомогательный массив</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>buf <span class="op">=</span> line.split()</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co"># количество вершин очередной грани</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>size <span class="op">=</span> <span class="bu">int</span>(buf.pop(<span class="dv">0</span>))</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co"># кол-во хороших точек в грани</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>good_points_num <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co"># массив вершин этой грани</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>vertexes <span class="op">=</span> []</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> n <span class="kw">in</span> buf:</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="va">self</span>.vertexes[<span class="bu">int</span>(n) <span class="op">-</span> <span class="dv">1</span>].is_good:</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        good_points_num <span class="op">+=</span> <span class="dv">1</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    vertexes.append(<span class="va">self</span>.vertexes[<span class="bu">int</span>(n) <span class="op">-</span> <span class="dv">1</span>])</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="co"># задание рёбер грани</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> n <span class="kw">in</span> <span class="bu">range</span>(size):</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.edges.append(Edge(vertexes[n <span class="op">-</span> <span class="dv">1</span>], vertexes[n]))</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="co"># задание самой грани</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="va">self</span>.facets.append(Facet(vertexes))</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> good_points_num <span class="op">==</span> <span class="dv">1</span>:</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    orig_vertexes <span class="op">=</span> [_vertexes[<span class="bu">int</span>(n) <span class="op">-</span> <span class="dv">1</span>] <span class="cf">for</span> n <span class="kw">in</span> buf]</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.good_area <span class="op">+=</span> Facet(orig_vertexes).area()</span></code></pre></div>
+<h3 id="модификация-класса-tkdrawer">Модификация класса
+<code>TkDrawer</code></h3>
+<p>Добавим в класс <code>TkDrawer</code> метод <code>draw_line()</code>,
+который рисует линию с учётом коэффициента гомотетии из файла полиэдра и
+переменной <code>SCALE</code>.</p>
+<p>Реализация метода <code>draw_line()</code>:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode py"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Рисование линии</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> draw_line(<span class="va">self</span>, p, q, homothety<span class="op">=</span><span class="fl">1.0</span>, color<span class="op">=</span><span class="st">&quot;black&quot;</span>):</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.canvas.create_line(x(p, homothety), y(p, homothety),</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>                            x(q, homothety), y(q, homothety),</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>                            fill<span class="op">=</span>color, width<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.root.update()</span></code></pre></div>
+<h3 id="написание-тестов">Написание тестов</h3>
+<p>Для проверки правильности решения задачи были написаны тесты с
+использованием простых полиэдров, имеющих несложную структуру (например,
+две плоскости). Также специально для тестов были созданы полиэдры:
+параллелепипед, тетраэдр. Тесты, проверяющие корректность вычисления
+площади размещены в файле <code>test_good_vertexes.py</code>.</p>
+<p>На данных изображениях представлен результат работы программы для
+одной и той же проекции параллелепипеда с разными коэффициентами
+гомотетии:</p>
+<figure>
+<img src="./src/img/parallelepiped1.png"
+alt="Большой коэффициент гомотетии." />
+<figcaption aria-hidden="true">Большой коэффициент
+гомотетии.</figcaption>
+</figure>
+<figure>
+<img src="./src/img/parallelepiped2.png"
+alt="Маленький коэффициент гомотетии." />
+<figcaption aria-hidden="true">Маленький коэффициент
+гомотетии.</figcaption>
+</figure>
+<p>Можно заметить, что изменение коэффициента гомотетии меняет положение
+красной вертикальной прямой, разделяющей точки на «хорошие» и обычные.
+При этом суммарная площадь подходящих граней не меняется.</p>
+<h2
+id="команды-с-помощью-которых-получены-итоговые-отчёты-в-заданных-форматах">Команды,
+с помощью которых получены итоговые отчёты в заданных форматах</h2>
+<p>Представленные команды следует исполнять в директории, содержащей
+файл <code>report.md</code>.</p>
+<ul>
+<li>Для получения отчёта в формате <code>.pdf</code> используется
+следующая команда:</li>
+</ul>
+<pre><code>pandoc --template default.latex -s --toc --lua-filter
+./include-code-files.lua --metadata-file=metadata.yaml
+report.md -o report.pdf</code></pre>
+<ul>
+<li>Для получения отчёта в формате <code>.html</code> используется
+следующая команда:</li>
+</ul>
+<pre><code>pandoc -o report.html -f markdown -t html -s --template
+default.html5 -s --toc --lua-filter ./include-code-files.lua
+--metadata-file=metadata.yaml --mathjax report.md</code></pre>
+<ul>
+<li>Для получения отчёта в формате <code>.docx</code> используется
+следующая команда:</li>
+</ul>
+<pre><code>pandoc -o report.docx -f markdown -t docx --lua-filter
+./include-code-files.lua --metadata-file=metadata.yaml report.md</code></pre>
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    displayMath: [['\\[','\\]']],
+    processEscapes: false,
+    processRefs: true,
+    processEnvironments: true,
+    macros: {
+      sh: "{\\mathop{\\mathrm{sh}\\ }\\nolimits}",
+      ch: "{\\mathop{\\mathrm{ch}\\ }\\nolimits}",
+      tg: "{\\mathop{\\mathrm{tg}\\ }\\nolimits}",
+      ctg: "{\\mathop{\\mathrm{ctg}\\ }\\nolimits}",
+      arctg: "{\\mathop{\\mathrm{arctg}\\ }\\nolimits}",
+      arcctg: "{\\mathop{\\mathrm{arcctg}\\ }\\nolimits}",
+      th: "{\\mathop{\\mathrm{th}\\ }\\nolimits}",
+      cth: "{\\mathop{\\mathrm{cth}\\ }\\nolimits}",
+      cosec: "{\\mathop{\\mathrm{cosec}\\ }\\nolimits}",
+      Prob: "{\\mathop{\\mathsf{P}}\\nolimits}",
+      Variance: "{\\mathop{\\mathsf{D}}\\nolimits}",
+      nod: "{\\mathop{\\mathrm{н.о.д.}}\\nolimits}",
+      nok: "{\\mathop{\\mathrm{н.о.к.}}\\nolimits}",
+      NOD: "{\\mathop{\\mathrm{НОД}}\\nolimits}",
+      NOK: "{\\mathop{\\mathrm{НОК}}\\nolimits}",
+      Proj: "{\\mathop{\\mathrm{Пр}}\\nolimits}"
+    }
+  },
+  options: {
+    skipHtmlTags: ['script','noscript','style','textarea','pre','code'],
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  },
+  svg: {
+    displayAlign: 'left'
+  }
+};
+</script>
+<script
+src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js"
+type="text/javascript"></script>
+</body>
+</html>
